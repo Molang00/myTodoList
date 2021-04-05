@@ -13,9 +13,11 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
 
+const val targetDateFormat = "yyyy년 M월 d일"
+
 class MainActivity : AppCompatActivity() {
-    lateinit var mainActivity: MainActivity
     lateinit var todoItemRealmManager: TodoItemRealmManager
+    lateinit var mainActivity: MainActivity
 
     lateinit var targetDate: Date
 
@@ -23,7 +25,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         mainActivity = this
-        todoItemRealmManager = TodoItemRealmManager(Realm.getDefaultInstance())
+        todoItemRealmManager = getTodoItemRealmManagerInstance()
 
         targetDate = Date()
         initUI()
@@ -37,7 +39,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setInitValues() {
-        tv_target_date.text = SimpleDateFormat("yyyy년 M월 d일").format(targetDate)
+        tv_target_date.text = SimpleDateFormat(targetDateFormat).format(targetDate)
     }
 
     val todoList = ArrayList<TodoItem>()
@@ -58,6 +60,15 @@ class MainActivity : AppCompatActivity() {
             todoList
         )
         rv_todo_list.adapter = todoListAdapter
+        rv_todo_list.addOnLayoutChangeListener { v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+            if(bottom < oldBottom) {
+                rv_todo_list.postDelayed(Runnable {
+                    rv_todo_list.smoothScrollToPosition(
+                            Math.max(todoListAdapter.itemCount - 1, 0)
+                    )
+                }, 50)
+            }
+        }
     }
 
     fun setOnClickListeners() {
@@ -101,16 +112,18 @@ class MainActivity : AppCompatActivity() {
                 todoItemRealmManager.create(item)
                 todoList.add(item)
                 todoListAdapter.notifyDataSetChanged()
+                rv_todo_list.scrollToPosition(
+                        rv_todo_list.adapter?.getItemCount()?.minus(1)
+                                ?: 0
+                )
             }
             DELETE_TODO_ITEM -> {
                 todoList.remove(item)
                 todoListAdapter.notifyDataSetChanged()
                 todoItemRealmManager.delete(item)
             }
-            CHECK_TODO_ITEM ->
-                todoItemRealmManager.updateChecked(item, true)
-            UNCHECK_TODO_ITEM ->
-                todoItemRealmManager.updateChecked(item, false)
+            CHANGED_TODO_ITEM ->
+                todoItemRealmManager.updateChecked(item)
         }
         calculateRateAndCnt()
     }
