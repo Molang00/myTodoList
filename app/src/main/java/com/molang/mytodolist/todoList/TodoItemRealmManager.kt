@@ -33,6 +33,20 @@ class TodoItemRealmManager(
                 .map { TodoItem(it) }
     }
 
+    fun findAllByTargetDateAndTypeAndChecked(
+            targetDate: String,
+            type: String,
+            checked: Boolean
+    ): List<TodoItem> {
+        return realm.where(TodoItem::class.java)
+                .equalTo("targetDate", targetDate)
+                .equalTo("type", type)
+                .equalTo("checked", checked)
+                .findAll()
+                .sort("created")
+                .map { TodoItem(it) }
+    }
+
     fun create(newTodoItem: TodoItem): TodoItem {
         realm.beginTransaction()
         realm.insert(

@@ -22,6 +22,7 @@ class SplashActivity : AppCompatActivity() {
         initPref(this)
 
         updateDailyTodoItemByLastLoginTimestamp()
+        updateWorkTodoItemByLastLoginTimestamp()
         setLastLoginTimestamp()
         startMainActivity()
     }
@@ -45,20 +46,55 @@ class SplashActivity : AppCompatActivity() {
     }
 
     private fun updateDailyTodoItemByLastLoginTimestamp() {
-        val calendar = Calendar.getInstance()
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        val targetDateStringForm = SimpleDateFormat(targetDateFormat).format(calendar.time)
-        if (calendar.time.after(getLastLoginTimestamp())) {
+        val currentCalendar = Calendar.getInstance()
+        currentCalendar.set(Calendar.HOUR_OF_DAY, 0)
+        currentCalendar.set(Calendar.MINUTE, 0)
+        currentCalendar.set(Calendar.SECOND, 0)
+        currentCalendar.set(Calendar.MILLISECOND, 0)
+        var lastLoginTimeStampCalendar = Calendar.getInstance()
+        lastLoginTimeStampCalendar.time = getLastLoginTimestamp()
+        
+        while (currentCalendar.time.after(lastLoginTimeStampCalendar.time)) {
             val dailyTodoItemsAtYesterday = getTodoItemRealmManagerInstance()
                     .findAllByTargetDateAndType(
                             SimpleDateFormat(targetDateFormat)
-                                    .format(
-                                            Date(Date().time - 24 * 60 * 60 * 1000)
-                                    ),
+                                    .format(lastLoginTimeStampCalendar.time),
                             DAILY_TYPE
+                    )
+            lastLoginTimeStampCalendar.add(Calendar.DATE, 1)
+            getTodoItemRealmManagerInstance().createAll(
+                    dailyTodoItemsAtYesterday
+                            .map{
+                                TodoItem(
+                                        checked = false,
+                                        type = it.type,
+                                        label = it.label,
+                                        targetDate = SimpleDateFormat(targetDateFormat)
+                                                .format(lastLoginTimeStampCalendar.time)
+                                )
+                            }
+            )
+        }
+    }
+
+    private fun updateWorkTodoItemByLastLoginTimestamp() {
+        val currentCalendar = Calendar.getInstance()
+        currentCalendar.set(Calendar.HOUR_OF_DAY, 0)
+        currentCalendar.set(Calendar.MINUTE, 0)
+        currentCalendar.set(Calendar.SECOND, 0)
+        currentCalendar.set(Calendar.MILLISECOND, 0)
+        var lastLoginTimeStampCalendar = Calendar.getInstance()
+        lastLoginTimeStampCalendar.time = getLastLoginTimestamp()
+
+        if (currentCalendar.time.after(lastLoginTimeStampCalendar.time)) {
+            val dailyTodoItemsAtYesterday = getTodoItemRealmManagerInstance()
+                    .findAllByTargetDateAndTypeAndChecked(
+                            SimpleDateFormat(targetDateFormat)
+                                    .format(
+                                            Date(currentCalendar.time.time - 24*60*60*1000)
+                                    ),
+                            WORK_TYPE,
+                            false
                     )
             getTodoItemRealmManagerInstance().createAll(
                     dailyTodoItemsAtYesterday
@@ -67,7 +103,8 @@ class SplashActivity : AppCompatActivity() {
                                         checked = false,
                                         type = it.type,
                                         label = it.label,
-                                        targetDate = targetDateStringForm
+                                        targetDate = SimpleDateFormat(targetDateFormat)
+                                                .format(currentCalendar.time)
                                 )
                             }
             )
